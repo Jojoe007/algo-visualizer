@@ -2,6 +2,7 @@ import Editor, { type OnMount } from '@monaco-editor/react';
 import type * as Monaco from 'monaco-editor';
 import { useEffect, useRef } from 'react';
 import type { RunError } from '../core/trace';
+import type { Diagnostic } from '../lang/types';
 import { useTheme } from './theme';
 
 interface Props {
@@ -10,15 +11,21 @@ interface Props {
   readOnly?: boolean;
   line?: number;
   error?: RunError;
+  /** Converter diagnostics, shown as markers alongside `error`. */
+  diagnostics?: Diagnostic[];
   onRunShortcut?: () => void;
+  onCursorLine?: (line: number) => void;
+  language?: string;
 }
 
-export function CodePanel({ value, onChange, readOnly, line, error, onRunShortcut }: Props) {
+export function CodePanel({ value, onChange, readOnly, line, error, diagnostics, onRunShortcut, onCursorLine, language = 'javascript' }: Props) {
   const editorRef = useRef<Monaco.editor.IStandaloneCodeEditor | null>(null);
   const monacoRef = useRef<typeof Monaco | null>(null);
   const decorations = useRef<Monaco.editor.IEditorDecorationsCollection | null>(null);
   const runRef = useRef(onRunShortcut);
   runRef.current = onRunShortcut;
+  const cursorRef = useRef(onCursorLine);
+  cursorRef.current = onCursorLine;
   const theme = useTheme();
 
   const onMount: OnMount = (editor, monaco) => {
@@ -26,6 +33,7 @@ export function CodePanel({ value, onChange, readOnly, line, error, onRunShortcu
     monacoRef.current = monaco;
     decorations.current = editor.createDecorationsCollection();
     editor.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyCode.Enter, () => runRef.current?.());
+    editor.onDidChangeCursorPosition((e) => cursorRef.current?.(e.position.lineNumber));
     syncLine();
     syncError();
   };
@@ -47,28 +55,32 @@ export function CodePanel({ value, onChange, readOnly, line, error, onRunShortcu
     const editor = editorRef.current, monaco = monacoRef.current;
     const model = editor?.getModel();
     if (!monaco || !model) return;
-    const markers: Monaco.editor.IMarkerData[] = [];
-    if (error?.line) {
-      const ln = Math.min(error.line, model.getLineCount());
-      markers.push({
-        severity: monaco.MarkerSeverity.Error,
-        message: error.message,
+    const marker = (severity: Monaco.MarkerSeverity, message: string, line: number, column?: number): Monaco.editor.IMarkerData => {
+      const ln = Math.min(line, model.getLineCount());
+      return {
+        severity,
+        message,
         startLineNumber: ln,
         endLineNumber: ln,
-        startColumn: error.column !== undefined ? error.column + 1 : model.getLineFirstNonWhitespaceColumn(ln),
+        startColumn: column !== undefined ? column + 1 : model.getLineFirstNonWhitespaceColumn(ln),
         endColumn: model.getLineMaxColumn(ln),
-      });
+      };
+    };
+    const markers: Monaco.editor.IMarkerData[] = [];
+    if (error?.line) markers.push(marker(monaco.MarkerSeverity.Error, error.message, error.line, error.column));
+    for (const d of diagnostics ?? []) {
+      markers.push(marker(d.severity === 'error' ? monaco.MarkerSeverity.Error : monaco.MarkerSeverity.Warning, d.message, d.line, d.column));
     }
     monaco.editor.setModelMarkers(model, 'viz', markers);
   };
 
   useEffect(syncLine, [line]);
-  useEffect(syncError, [error, value]);
+  useEffect(syncError, [error, diagnostics, value]);
 
   return (
     <div className="code-panel">
       <Editor
-        language="javascript"
+        language={language}
         value={value}
         onChange={(v) => onChange?.(v ?? '')}
         onMount={onMount}

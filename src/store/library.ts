@@ -40,3 +40,13 @@ export const deleteSaved = (name: string) => write(LIB, listSaved().filter((a) =
 
 export const loadDraft = () => read<Omit<SavedAlgo, 'updatedAt'> | null>(DRAFT, null);
 export const saveDraft = (d: Omit<SavedAlgo, 'updatedAt'>) => write(DRAFT, d);
+
+// Code Converter draft (source in a non-JS language).
+export interface ConverterDraft {
+  template: Template;
+  name: string;
+  source: string;
+}
+const CONVERTER_DRAFT = 'algoviz.converterDraft';
+export const loadConverterDraft = () => read<ConverterDraft | null>(CONVERTER_DRAFT, null);
+export const saveConverterDraft = (d: ConverterDraft) => write(CONVERTER_DRAFT, d);

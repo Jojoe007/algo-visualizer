@@ -37,6 +37,19 @@ algorithm source (plain JS string)
   - `viz.swap` and `viz.compare` touch the raw array, so they bypass the proxy.
 - **Transient vs persistent state:** `applyStep` clears transient fields (`array.active`, `grid.changed`, `graph.activeEdge/activeNode`) at the start of each step. Everything else accumulates. `stateAt()` returns a cached object; treat it as read-only.
 
+## Code Converter (other languages → JS)
+
+`#/convert` (`pages/CodeConverter.tsx`) converts Java to the JS above. It is a small compiler:
+```
+lang/java/{lexer,parser,lower}.ts  → ir/core.ts (Core IR: typed, language-neutral, every node has loc)
+  → backends/js/emit.ts            → JS for the sandbox
+```
+- `toJavaScript(lang, src)` (`lang/registry.ts`) is the single entry point. A new language is a new front end that lowers to Core IR, plus a `LANGUAGES` entry.
+- **Emission is line-aligned.** A statement from source line L is written on JS line L, so step lines and error lines point at the original source. Keep it that way, and never emit extra lines.
+- Library calls lower to named `Builtin` ops (`seq.pushBack`, `map.get`, …), not to JS. The IR is meant to also feed a future bytecode/VM back end for machine simulation.
+- Visualizer object types (`Viz`, `Grid`, `Graph`, `Edge`, …) are in `ir/host.ts`.
+- Unsupported Java becomes a `Diagnostic`, never an exception. Tests are in `src/__tests__/converter.test.ts`.
+
 ## Templates (input kinds)
 
 `Template = 'array' | 'grid' | 'tree' | 'graph'` (core/tracer.ts). A new template touches all of these:

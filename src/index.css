@@ -1080,6 +1080,54 @@ button.small {
   color: var(--text);
 }
 
+/* ---------- code converter ---------- */
+.converter {
+  flex: 1;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  grid-template-rows: auto minmax(0, 1fr);
+  gap: 12px;
+  padding: 12px;
+  height: calc(100vh - 53px);
+  min-height: 560px;
+}
+.converter-head {
+  grid-column: 1 / -1;
+}
+.converter-label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 14px;
+  border-bottom: 1px solid var(--border);
+}
+.converter-label .name-input {
+  margin-left: auto;
+  max-width: 260px;
+}
+.diagnostics {
+  list-style: none;
+  margin: 0;
+  padding: 8px 14px;
+  border-top: 1px solid var(--border);
+  max-height: 120px;
+  overflow: auto;
+  font-size: 12.5px;
+}
+.diagnostics li {
+  padding: 2px 0;
+}
+.diagnostics .error {
+  color: var(--swap);
+}
+.diagnostics .warning {
+  color: color-mix(in srgb, var(--compare) 55%, var(--text));
+}
+.diag-line {
+  font-family: ui-monospace, monospace;
+  opacity: 0.8;
+}
+
 /* ---------- responsive ---------- */
 @media (max-width: 1100px) {
   .workspace.no-side {
@@ -1105,6 +1153,14 @@ button.small {
 @media (max-width: 760px) {
   .workspace {
     grid-template-columns: 1fr;
+  }
+  .converter {
+    grid-template-columns: 1fr;
+    grid-template-rows: auto;
+    height: auto;
+  }
+  .converter-side {
+    height: 460px;
   }
   .lanes {
     grid-template-columns: 1fr;
